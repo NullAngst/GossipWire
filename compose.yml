@@ -1,0 +1,76 @@
+# GossipWire compose file.
+# Every line you might need to change has an explanation right above it.
+# Lines marked LEAVE ALONE lock the container down. You do not need to touch them.
+
+services:
+  gossipwire:
+    # Builds the bot from this folder. Run: docker compose build --pull
+    # then: docker compose up -d
+    build: .
+    image: gossipwire:local
+    container_name: gossipwire
+
+    # Starts the bot again after a crash or a reboot, unless you stopped it yourself.
+    restart: unless-stopped
+
+    # LEAVE ALONE. The bot can only write to /data, cannot gain new
+    # permissions, and gets no special Linux privileges.
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+    environment:
+      # REQUIRED. Your Discord user ID. This is a long number, not your username.
+      # How to get it: Discord Settings > Advanced > turn on Developer Mode,
+      # then right-click your own name anywhere and pick "Copy User ID".
+      # This person, and only this person, can run /instance.
+      OWNER_ID: "123456789012345678"
+
+      # REQUIRED. Who your servers can trade alerts with. Pick one:
+      #   off       = only servers that use THIS bot. Start here if unsure.
+      #   allowlist = also other GossipWire instances, but only ones you add
+      #               yourself with /instance peer add.
+      #   open      = any GossipWire instance can ask to connect. Needs INSTANCE_URL.
+      # Your server mods still approve every subscription in every mode.
+      FEDERATION_MODE: "off"
+
+      # ONLY FOR SETUP C. The public https address of your bot, with no slash
+      # at the end. Example: https://alerts.example.org
+      # Leave it empty ("") for setup A or B.
+      # DO NOT CHANGE IT LATER. Other servers know yours by this address,
+      # and changing it breaks every cross-instance subscription.
+      INSTANCE_URL: ""
+
+      # Tells the bot where to find its token. Matches the secrets block
+      # at the bottom. LEAVE ALONE.
+      DISCORD_TOKEN_FILE: /run/secrets/discord_token
+
+    secrets:
+      - discord_token
+
+    volumes:
+      # Where the bot keeps its database, evidence files and its identity key.
+      # The left side is a folder on your machine. BACK THIS FOLDER UP.
+      # Deleting it wipes every subscription, and other instances will see
+      # your bot as a stranger with a new key.
+      - ./data:/data
+
+    # ONLY FOR SETUP C. Remove the # from the next two lines to turn it on.
+    # Left side = your machine, right side = inside the container.
+    # 127.0.0.1 means only programs on this machine can reach it, which is
+    # what you want: your reverse proxy adds https and faces the internet.
+    # Point your reverse proxy at http://127.0.0.1:8081
+    # If your reverse proxy also runs in Docker, skip ports entirely and see
+    # the README section "Reverse proxy in Docker".
+    # ports:
+    #   - "127.0.0.1:8081:8081"
+
+secrets:
+  discord_token:
+    # A text file next to this one, holding ONLY your bot token on one line.
+    # How to get it: Discord developer portal > your application > Bot > Reset Token.
+    # Anyone who has this token controls your bot. Never paste it into this
+    # file, a screenshot, or a chat. If it leaks, reset it in the portal.
+    file: ./discord_token.txt
